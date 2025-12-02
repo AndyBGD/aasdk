@@ -60,6 +60,7 @@ make -j$(nproc)
 | [📦 Packaging Guide](PACKAGING.md) | Package building and distribution |
 | [🚀 Modern Logger](MODERN_LOGGER.md) | Advanced logging system documentation |
 | [⚡ Implementation Summary](IMPLEMENTATION_SUMMARY.md) | Recent changes and features |
+| [📱 Android Cross-Compilation](docs/ANDROID.md) | Experimental NDK build instructions |
 
 ## 🏗️ Supported Architectures
 
@@ -107,6 +108,14 @@ make -j$(nproc)
 # Cross-compilation
 TARGET_ARCH=arm64 ./build.sh release   # ARM64 build
 TARGET_ARCH=armhf ./build.sh release   # ARMHF build
+
+# Experimental Android (NDK)
+cmake -S . -B build-android \\
+  -G Ninja \\
+  -DCMAKE_TOOLCHAIN_FILE=cmake_modules/Toolchain-android.cmake \\
+  -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \\
+  -DCMAKE_SYSTEM_VERSION=24 \\
+  -DAASDK_ENABLE_TESTS=OFF
 ```
 
 ### VS Code Integration

@@ -27,6 +27,14 @@ Key notes:
 - The default STL is `c++_static`; override with `-DCMAKE_ANDROID_STL_TYPE=c++_shared` if you want shared STL.
 - Tests are disabled by default in the example because the test harness targets desktop environments.
 
+If you prefer an automated bootstrap that downloads the NDK, builds Abseil/Protobuf, and configures an Android build tree, run:
+
+```bash
+scripts/bootstrap_android.sh
+```
+
+The script stages artifacts in `.android-stage/` and emits the configured build directory location. It intentionally stops before building AASDK binaries until OpenSSL, Boost, and libusb are staged for Android (see notes below).
+
 ## Build
 ```bash
 cmake --build build-android

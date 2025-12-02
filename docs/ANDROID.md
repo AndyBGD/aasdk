@@ -33,6 +33,46 @@ cmake --build build-android
 ```
 This produces Android-targeted static and shared libraries under `build-android/lib/`.
 
+## Bootstrapping Protobuf for Android (experimental)
+The Android toolchain does not bundle `protoc` or target libraries, so you need to provide them manually:
+
+1. **Host `protoc`**: download a matching Linux host binary (e.g., `protoc-28.2-linux-x86_64.zip`) and add its `bin/` directory to your `PATH`.
+2. **Cross-compiled libraries**:
+   - Clone the Protobuf sources (the release tarball omits `third_party/abseil-cpp`, which Protobuf’s CMake build expects) and initialize the Abseil submodule:
+     ```bash
+     git clone --depth 1 --branch v28.2 https://github.com/protocolbuffers/protobuf.git /workspace/protobuf-src
+     (cd /workspace/protobuf-src && git submodule update --init third_party/abseil-cpp)
+     ```
+   - Configure with the Android toolchain and install to a staging prefix:
+     ```bash
+     export ANDROID_NDK=/workspace/android-ndk-r26d
+     export PATH="$ANDROID_NDK/prebuilt/linux-x86_64/bin:$PATH"
+     cmake -S /workspace/protobuf-src -B /workspace/protobuf-src/build-android \
+       -G Ninja \
+       -DCMAKE_TOOLCHAIN_FILE=/workspace/aasdk/cmake_modules/Toolchain-android.cmake \
+       -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
+       -DCMAKE_SYSTEM_VERSION=24 \
+       -Dprotobuf_BUILD_TESTS=OFF \
+       -Dprotobuf_BUILD_SHARED_LIBS=ON \
+       -Dprotobuf_WITH_ZLIB=OFF \
+       -Dprotobuf_ABSL_PROVIDER=module \
+       -DCMAKE_INSTALL_PREFIX=/workspace/protobuf-android
+     cmake --build /workspace/protobuf-src/build-android --target install
+     ```
+3. **Point AASDK at the staged artifacts** when configuring:
+   ```bash
+   cmake -S . -B build-android -G Ninja \
+     -DCMAKE_TOOLCHAIN_FILE=cmake_modules/Toolchain-android.cmake \
+     -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
+     -DCMAKE_SYSTEM_VERSION=24 \
+     -DProtobuf_PROTOC_EXECUTABLE=/workspace/protoc-28.2/bin/protoc \
+     -DProtobuf_INCLUDE_DIR=/workspace/protobuf-android/include \
+     -DProtobuf_LIBRARIES=/workspace/protobuf-android/lib/libprotobuf.so \
+     -DAASDK_ENABLE_TESTS=OFF
+   ```
+
+> Tip: If you see an Abseil target such as `absl::if_constexpr` missing during the Protobuf configure step, double-check that the `third_party/abseil-cpp` submodule was initialized. The published release tarballs exclude it; cloning the git repo and updating submodules pulls in the expected CMake target definitions.
+
 ## Integrating into an Android app
 1. Copy the resulting `.so` files into your app module’s `src/main/jniLibs/<abi>/` directory.
 2. Add a JNI shim that exposes the required AASDK entry points to the Android runtime.
